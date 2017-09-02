@@ -111,6 +111,7 @@ uint8_t checkButton(uint16_t xCoord, uint16_t yCoord, uint8_t screen)
 	*
 	* @param column pointer to key column no
 	* @param row pointer to key row no
+	* @param current view
 	* @retval Value of button pressed
   */
 uint8_t getButtonDef(uint8_t row,uint8_t column,uint8_t screen)
@@ -197,6 +198,7 @@ uint8_t getButtonDef(uint8_t row,uint8_t column,uint8_t screen)
 			break;
 		}
 	}
+	
 	// screen = 2 is the card screen
 	if(screen == 2)
 	{

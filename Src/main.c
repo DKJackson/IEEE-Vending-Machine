@@ -28,7 +28,7 @@ enum STATE{SLEEP,SLIDE_CARD,SELECTION,STOCK,DONE};
 uint8_t  status = 0;						// Push button status
 volatile uint16_t x, y; 									// x,y location of touch input
 float cost = 0.00; 							// Selected item cost
-float balance = 0.00;						// Current balance
+//float balance = 0.00;						// Current balance
 volatile enum STATE state = SLIDE_CARD;   // UI state
 enum STATE prevState = SLEEP;   // Previous UI state
 uint8_t  text[30] = {0,0};  		// Text buffer for display
@@ -50,10 +50,28 @@ struct Item
 {
 	uint8_t itemID;	//Same as motor ID.  Also, same as index for item array.  Why is this here?  Because.
 	uint8_t itemCost;	//Self explanatory. Seriously, why are you reading this?
-	uint8_t itemCount;
+	uint8_t itemCount; //number in stock
 };
 
 struct Item item[NUM_ITEMS];
+
+typedef enum User_Type
+{
+	USER,
+	ADMIN
+}U_Type;
+
+	
+//Structure for user accounts
+struct User
+{
+	uint8_t studentID;
+	uint8_t wildcatNum;
+	float balance;
+	U_Type userType;
+};
+
+struct User usr;
 
 enum Button_Area
 {
@@ -78,12 +96,13 @@ uint8_t *amountOnCard;					// Money on Card
 char* password = "12345";
 int j = 0;
 
-//States for password characters.  Password must be entered in correct order
+/*States for password characters.  Password must be entered in correct order
 enum User_State
 {
 	USER,
 	ADMIN
 } userState = USER;
+*/
 
 /* Flags */
 uint8_t updateBalance = 1;	    // Refresh balance display
@@ -239,6 +258,22 @@ int main(void)
 				if(selectDisp[8] != (uint8_t) '_' && selectionPressed == (uint8_t) '>')
 				{
 					state = SELECTION;
+					
+					/********************************* Get user data and update usr struct************************************/
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 					// Setup the name of the file which can only be 8 characters + ".TXT"
 					fileName = (char*)&selectDisp+1;
 					strncat (fileName, ".TXT", 4);
@@ -247,8 +282,9 @@ int main(void)
 					// File Does Not Exist
 					if(amountOnCard == (uint8_t*)'X')
 					{
-						balance += 0;
+						usr.balance += 0;
 					}
+					
 					// Find out how much money is on the account
 					else
 					{
@@ -256,7 +292,7 @@ int main(void)
 						{
 							if(amountOnCard[i] != NULL)
 							{
-								balance += (pow(10,j) * (amountOnCard[i] - 48));
+								usr.balance += (pow(10,j) * (amountOnCard[i] - 48));
 								j +=1;
 							}
 						}
@@ -308,7 +344,7 @@ int main(void)
 			
 			// Display cost in red or green based on balance and the price of the item
 			BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-			if(balance < cost)
+			if(usr.balance < cost)
 				BSP_LCD_SetTextColor(LCD_COLOR_RED);
 			else
 				BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
@@ -404,12 +440,12 @@ int main(void)
 					// Valid Selection
 					if(selectDisp[0] != (uint8_t) '_' && selectDisp[1] != (uint8_t) '_')
 					{
-						if(balance >= cost)
+						if(usr.balance >= cost)
 						{
 							// Vend item
-							balance -= cost;
+							usr.balance -= cost;
 							//amount = (char*)balance;
-							writeFile((uint8_t*)&balance, (char*) fileName);
+							writeFile((uint8_t*)&(usr.balance), (char*) fileName);
 							state = SLIDE_CARD;
 						}
 					}
@@ -515,7 +551,7 @@ int main(void)
 				//confirmation button pressed
 				if(selectionPressed == (uint8_t)'>')
 				{
-					if(balance >= cost)
+					if(usr.balance >= cost)
 					{
 						//get id of motor to turn
 						motorId = getItemId(selectDisp);
@@ -526,9 +562,11 @@ int main(void)
 							//Decrement item count
 							item[motorId].itemCount--;
 							
-							balance -= cost;
-							//amount = (char*)balance;
-							writeFile((uint8_t*)&balance, (char*) fileName);
+							usr.balance -= cost;
+							
+						
+							writeFile((uint8_t*)&usr, (char*) fileName);
+							
 							state = SLIDE_CARD;
 								
 							//turn motors
@@ -559,8 +597,18 @@ int main(void)
 			{
 				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
 				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				sprintf((char*)text, "$%0.2f",balance);
+				sprintf((char*)text, "$%0.2f",usr.balance);
 				BSP_LCD_DisplayStringAt(10, 172, (uint8_t*) text, LEFT_MODE);
+				
+				/**************************write usr to file**********************************/
+				
+				
+				
+				
+				
+				
+				
+				
 				updateBalance = 0;
 			}
 			
@@ -584,249 +632,158 @@ int main(void)
 		while(state == STOCK)
 		{
 			
-			// Draw the UI if state has changed
-			if(prevState != STOCK)
+			
+			if(usr.userType != ADMIN)
 			{
-				prevState = STOCK; // Ensure we dont redraw the UI unless necesarry				
-				drawAdminDispFrame();		 // Render display area			
-				//drawPassKeypad();					 // Render passkey buttons			
-				BSP_LCD_SetBackColor(LCD_COLOR_WHITE);					
+				state = SELECTION;
 			}
 			
-			if(x != 0 && y != 0)
+			
+			else
 			{
-				selectionPressed = checkPassKeyButton(x,y);
-				
-				if(userState != ADMIN)
+				// Draw the UI if state has changed
+				if(prevState != STOCK)
 				{
-					//selection must be 1-9
-					if(selectionPressed != NULL)
-					{
-						//update password display
-						updatePw = 1;
-						
-						passkey[passkeyIdx] = selectionPressed;
-						
-						if(++passkeyIdx >= PASSLEN)
-						{
-							//incorrect password
-							if(strcmp(passkey, password) != 0)
-							{
-								passkey = "";
-							}
-							//correct password
-							else
-							{
-								userState = ADMIN;
-							}
-							passkeyIdx = 0;
-						}
-					}
+					prevState = STOCK; // Ensure we dont redraw the UI unless necesarry
 					
-					// When valid button pressed display selections
-					if(updatePw == 1)
-					{
-						
-						BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
-						BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
-						BSP_LCD_SetFont(&Font24);
-						
-						for(uint8_t i = 0; i < PASSLEN; i++)
-						{
-							if(passkey[i] != NULL)
-							{
-								sprintf((char*)text, "*");
-								BSP_LCD_DisplayStringAt(10, 58 + 20*i, (uint8_t*) text, LEFT_MODE);
-							}
-							else
-							{
-								sprintf((char*)text, "_");
-								BSP_LCD_DisplayStringAt(10, 58 + 20*i, (uint8_t*) text, LEFT_MODE);
-							}
-						}
-						
-						updatePw = 0;
-					}
+					drawAdminDispFrame();		 // Render display area
+				
+					//drawPassKeypad();					 // Render passkey buttons			
+					BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+					selectDisp[0] = (uint8_t)'_';
+					selectDisp[1] = (uint8_t)'_';
+					updateSelection = 1;
+					selectionPressed = NULL;
 				}
 				
-				//user is an admin
-				else
+				
+				if(x != 0 && y != 0)
 				{
-					//If not a passkey button, check for selection buttons
-					if(selectionPressed == NULL)
-					{
-						selectionPressed = checkButton(x,y,2);
-						buttonArea = SELECT;
-					}
-					
-					//User has pressed a password key
-					else
-					{
-						buttonArea = PASS;
-					}
-					
-					if(selectionPressed != NULL)
-					{
-						if(buttonArea == SELECT)
+		
+						//If not a passkey button, check for selection buttons
+						if(selectionPressed == NULL)
 						{
-							// ***********************************		COPIED FROM ABOVE, NEEDS OPTIMIZATION
-							if(selectionPressed == (uint8_t) '<')
-							{
-								if(selectDisp[1] != (uint8_t) '_')
-								{
-									selectDisp[1] = (uint8_t) '_';
-								}
-								
-								else if(selectDisp[0] != (uint8_t) '_')
-								{
-									selectDisp[0] = (uint8_t) '_';
-								}
-								
-								clear = 1;
-								updateSelection = 1;
-								HAL_Delay(100);
-							}
-							
-							// Delete entire selection
-							else if(selectionPressed == (uint8_t) 'X')
-							{
-								selectDisp[1] = (uint8_t) '_';
-								selectDisp[0] = (uint8_t) '_';
-								updateSelection = 1;
-								clear = 1;
-							}
-							
-							// Validate that selection is valid for the selection place
-							// ie selectDisp[0] must be A-E selectDisp[1] must be 0-4
-							if(selectDisp[0] == (uint8_t) '_')
-							{
-								selectionPressed = validateSelection(selectionPressed,0) ? selectionPressed : NULL;
-							}
-							
-							else if(selectDisp[1] == (uint8_t) '_')
-							{
-								selectionPressed = validateSelection(selectionPressed,1) ? selectionPressed : NULL;
-							}
-							
-							// Assign 1st selection if valid button was pressed
-							if(selectDisp[0] == (uint8_t)'_' && clear != 1)
-							{
-								selectDisp[0] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-								updateSelection = 1;
-							}
-							
-							// Assign 2nd selection if valid button was pressed
-							else if(selectDisp[1] == (uint8_t)'_' && clear != 1)
-							{
-								selectDisp[1] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-								updateSelection = 1;						
-							}
-							
-							//confirmation button pressed so update the item cost
-							if(selectionPressed == (uint8_t)'>' && selectDisp[0] != NULL && selectDisp[1] != NULL)
-							{
-								
-								
-								//Change selection color to green to confirm the cost has been updated
-								BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
-								updateSelection = 1;
-							}
-							
-							
-							// When valid button pressed display selections
-							if(updateSelection == 1)
-							{
-								sprintf((char*)text, "%c%c",selectDisp[0],selectDisp[1]);
-								BSP_LCD_DisplayStringAt(10, 58, (uint8_t*) text, LEFT_MODE);
-								updateSelection = 0;
-							}
-							
+							selectionPressed = checkButton(x,y,2);
+							buttonArea = SELECT;
 						}
-						// *************************************************** END COPIED AREA
 						
-						
+						//User has pressed a password key
 						else
 						{
-							
+							buttonArea = PASS;
 						}
-					}
+						
+						if(selectionPressed != NULL)
+						{
+							if(buttonArea == SELECT)
+							{
+								// ***********************************		COPIED FROM ABOVE, NEEDS OPTIMIZATION
+								if(selectionPressed == (uint8_t) '<')
+								{
+									if(selectDisp[1] != (uint8_t) '_')
+									{
+										selectDisp[1] = (uint8_t) '_';
+									}
+									
+									else if(selectDisp[0] != (uint8_t) '_')
+									{
+										selectDisp[0] = (uint8_t) '_';
+									}
+									
+									clear = 1;
+									updateSelection = 1;
+									HAL_Delay(100);
+								}
+								
+								// Delete entire selection
+								else if(selectionPressed == (uint8_t) 'X')
+								{
+									selectDisp[1] = (uint8_t) '_';
+									selectDisp[0] = (uint8_t) '_';
+									updateSelection = 1;
+									clear = 1;
+								}
+								
+								// Validate that selection is valid for the selection place
+								// ie selectDisp[0] must be A-E selectDisp[1] must be 0-4
+								if(selectDisp[0] == (uint8_t) '_')
+								{
+									selectionPressed = validateSelection(selectionPressed,0) ? selectionPressed : NULL;
+								}
+								
+								else if(selectDisp[1] == (uint8_t) '_')
+								{
+									selectionPressed = validateSelection(selectionPressed,1) ? selectionPressed : NULL;
+								}
+								
+								// Assign 1st selection if valid button was pressed
+								if(selectDisp[0] == (uint8_t)'_' && clear != 1)
+								{
+									selectDisp[0] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
+									updateSelection = 1;
+								}
+								
+								// Assign 2nd selection if valid button was pressed
+								else if(selectDisp[1] == (uint8_t)'_' && clear != 1)
+								{
+									selectDisp[1] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
+									updateSelection = 1;						
+								}
+								
+								//confirmation button pressed so update the item cost
+								if(selectionPressed == (uint8_t)'>' && selectDisp[0] != NULL && selectDisp[1] != NULL)
+								{
+									
+									
+									//Change selection color to green to confirm the cost has been updated
+									BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
+									updateSelection = 1;
+								}
+								
+								
+								// When valid button pressed display selections
+								if(updateSelection == 1)
+								{
+									sprintf((char*)text, "%c%c",selectDisp[0],selectDisp[1]);
+									BSP_LCD_DisplayStringAt(10, 58, (uint8_t*) text, LEFT_MODE);
+									updateSelection = 0;
+								}
+								
+							}
+							// *************************************************** END COPIED AREA
+							
+							
+							else
+							{
+								
+							}
+						}
+					
+					
+					selectionPressed = NULL;
 				}
 				
-				selectionPressed = NULL;
-			}
-			
-			
-			
-			//get password then render rest
-/*			if(pwState == S0)
-			{
+				// When valid button pressed display selections
+				if(updateSelection == 1)
+				{
+					BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+					BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
+					sprintf((char*)text, "%c%c",selectDisp[0],selectDisp[1]);
+					BSP_LCD_DisplayStringAt(10, 58, (uint8_t*) text, LEFT_MODE);
+					updateSelection = 0;
+				}
+				
+				// When money inserted display updated balance			
+				if(updateCost == 1)
+				{
+					BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+					BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
+					sprintf((char*)text, "$%0.2f",cost);
+					BSP_LCD_DisplayStringAt(10, 115, (uint8_t*) text, LEFT_MODE);
+					updateCost = 0;
+				}
 				
 			}
-			
-			else if(pwState == S1)
-			{
-				
-			}
-			
-			else if(pwState == S2)
-			{
-				
-			}
-			
-			else if(pwState == S3)
-			{
-				
-			}
-			
-			else if(pwState == S4)
-			{
-				
-			}
-			
-			else if(pwState == S5)
-			{
-				// Get the cost of the selected item
-				cost = getCost(selectDisp[0],selectDisp[1]);
-				
-				// Display cost in red or green based on balance and the price of the item
-				if(balance < cost)
-					BSP_LCD_SetTextColor(LCD_COLOR_RED);
-				else
-					BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
-				
-				// Display cost of selected item
-				sprintf((char*)text, "$%0.2f",cost);
-				BSP_LCD_DisplayStringAt(10, 115, (uint8_t*) text, LEFT_MODE);											
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				BSP_LCD_SetFont(&Font24);	
-					
-				
-				
-				
-				
-			}
-*/			
-			// When valid button pressed display selections
-			if(updateSelection == 1)
-			{
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				sprintf((char*)text, "%c%c",selectDisp[0],selectDisp[1]);
-				BSP_LCD_DisplayStringAt(10, 58, (uint8_t*) text, LEFT_MODE);
-				updateSelection = 0;
-			}
-			
-			// When money inserted display updated balance			
-			if(updateCost == 1)
-			{
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				sprintf((char*)text, "$%0.2f",cost);
-				BSP_LCD_DisplayStringAt(10, 172, (uint8_t*) text, LEFT_MODE);
-				updateBalance = 0;
-			}
-			
 		}
 	}
 }
@@ -924,7 +881,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - oneDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				balance += 1;
+				usr.balance += 1;
 			}
 		}
 		
@@ -939,7 +896,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_9) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				balance += 1;
+				usr.balance += 1;
 			}
 		}
 		
@@ -963,7 +920,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - fiveDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				balance += 5;
+				usr.balance += 5;
 			}
 		}
 		
@@ -977,7 +934,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_8) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				balance += 5;
+				usr.balance += 5;
 			}
 		}
 		
@@ -1000,7 +957,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - tenDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				balance += 10;
+				usr.balance += 10;
 			}
 		}
 		// Wait 90 ms and make sure pin is still low (low for 100 ms if bill inserted)
@@ -1020,7 +977,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_7) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				balance += 10;
+				usr.balance += 10;
 			}
 		}
 		
@@ -1044,7 +1001,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - twentyDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				balance += 20;
+				usr.balance += 20;
 			}
 		}
 		
@@ -1058,7 +1015,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_6) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				balance += 20;
+				usr.balance += 20;
 			}
 		}
 	
@@ -1244,7 +1201,7 @@ static void turnMotor(uint8_t motorId)
 		Error_Handler();
 	}
 	
-	//disable interrupts?  Will setting F9 trigger interrupt on EXTI9_5?
+	//Will setting F9 trigger interrupt on EXTI9_5? What are repercussions? Disable interrupts?
 	
 	
 	//reset motor select pins in case any are high for some reason
@@ -1402,11 +1359,8 @@ void TIM7_IRQHandler(void)
 		{
 			__HAL_TIM_CLEAR_FLAG(&TimHandle, TIM_FLAG_UPDATE);
 			
-			//rollover counter
-			//if(tickCount++ >= sizeof(uint32_t)) //skips the last tick in 32bits, but who cares
-			//{
-				tickCount++;// = 0;
-			//}
+			
+			tickCount++;
 		}
 	}
 	
