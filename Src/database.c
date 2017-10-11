@@ -45,7 +45,7 @@ void writeFile(uint8_t *text, char *fileName)
   if(f_open(&MyFile, (char*)fileName, FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
   {
 		// File Open Error
-    //Error_Handler();
+		Error_Handler();
   }
   else
   {

@@ -88,21 +88,13 @@ static uint8_t getItemId(uint8_t selection[]);
 static void turnMotor(uint8_t motorId);
 unsigned int ind = 0;						// Index into state machine	
 int adminCheck = 0;							// Yes or No to entering as an admin
-char *amount = "15";					  // Money to credit to the account
+char *amount = "";					  // Money to credit to the account
 char *fileName;								  // Name of file to read or write
 uint8_t *amountOnCard;					// Money on Card
 
 
 char* password = "12345";
 int j = 0;
-
-/*States for password characters.  Password must be entered in correct order
-enum User_State
-{
-	USER,
-	ADMIN
-} userState = USER;
-*/
 
 /* Flags */
 uint8_t updateBalance = 1;	    // Refresh balance display
@@ -277,7 +269,7 @@ int main(void)
 					// Setup the name of the file which can only be 8 characters + ".TXT"
 					fileName = (char*)&selectDisp+1;
 					strncat (fileName, ".TXT", 4);
-					writeFile((uint8_t*)amount, (char*) fileName);
+					//writeFile((uint8_t*)amount, (char*) fileName);
 					amountOnCard = readFile((char*) fileName);
 					// File Does Not Exist
 					if(amountOnCard == (uint8_t*)'X')
@@ -636,6 +628,7 @@ int main(void)
 			if(usr.userType != ADMIN)
 			{
 				state = SELECTION;
+				continue;
 			}
 			
 			
