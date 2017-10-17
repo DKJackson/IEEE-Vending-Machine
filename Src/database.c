@@ -35,11 +35,12 @@ void databaseInit(void)
 		***************************************************************/
 	}
 }
-void writeFile(uint8_t *text, char *fileName)
+void writeFile(User *user, char *fileName)
 {
 	FRESULT res;                            // FatFs function common result code
   uint32_t byteswritten;					        // File write/read counts
-  uint8_t *wtext = (uint8_t*)text;        // File write buffer
+//  uint8_t *wtext = (uint8_t*)text;        // File write buffer
+//	struct User *wtext = usr;
 	
   /* Create and Open a new text file object with write access */
   if(f_open(&MyFile, (char*)fileName, FA_CREATE_ALWAYS | FA_WRITE) != FR_OK)
@@ -47,10 +48,11 @@ void writeFile(uint8_t *text, char *fileName)
 		// File Open Error
 		Error_Handler();
   }
+	
   else
   {
 		/* Write data to the text file */
-    res = f_write(&MyFile, (uint8_t*)wtext, sizeof((uint8_t*)wtext), (void *)&byteswritten);
+    res = f_write(&MyFile, user, sizeof(*user), (void *)&byteswritten);
           
     if((byteswritten == 0) || (res != FR_OK))
     {
@@ -65,35 +67,38 @@ void writeFile(uint8_t *text, char *fileName)
 	}
 }
 
-uint8_t* readFile(char *fileName)
+User* readFile(char *fileName)
 {
 	FRESULT res;                            // FatFs function common result code
   uint32_t bytesread;       							// File write/read counts
-  uint8_t rtext[100]; 										    // File read buffer
-	uint8_t *output;
+//  User* rtext; 										    // File read buffer
+	User *output;
 	
 	/* Open the text file object with read access */
   if(f_open(&MyFile, (char*) fileName, FA_READ) != FR_OK)
   {
 		// File Open Error
-		return (uint8_t*)'X';
+		//return (uint8_t*)'X';
+		output = NULL;
   }
+	
   else
   {
 		/* Read data from the text file */
-		res = f_read(&MyFile, rtext, sizeof(rtext), (UINT*)&bytesread);   
+		res = f_read(&MyFile, output, sizeof(*output), (UINT*)&bytesread);
+		
 		if(res != FR_OK)
     {
 			// 'STM32.TXT' file Read or EOF Error 
 			Error_Handler();
     }
-    else
-    {
-			// Close the open text file 
-      f_close(&MyFile);
-		}
   }
-  output = (uint8_t*)rtext;
+	
+	// Close the open text file 
+	f_close(&MyFile);
+	
+  //output = (uint8_t*)rtext;
+	
 	return output;
 }
 

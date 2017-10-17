@@ -3,7 +3,7 @@
 #define __DATABASE_H
 
 void databaseInit(void);
-void writeFile(uint8_t *text, char *fileName);
-uint8_t* readFile(char *fileName);
+void writeFile(User *user, char *fileName);
+struct User* readFile(char *fileName);
 
 #endif 

@@ -27,6 +27,34 @@
 #define NUM_ITEMS		16
 
 
+
+//Structure for stocked items
+struct Item
+{
+	uint8_t itemID;	//Same as motor ID.  Also, same as index for item array.  Why is this here?  Because.
+	uint8_t itemCost;	//Self explanatory. Seriously, why are you reading this?
+	uint8_t itemCount; //number in stock
+};
+
+struct Item item[NUM_ITEMS];
+
+//user type is regular user or administrator
+typedef enum User_Type
+{
+	USER,
+	ADMIN
+}U_Type;
+
+	
+//Structure for user accounts
+typedef struct User
+{
+	uint8_t studentID;
+	uint8_t wildcatNum;
+	float balance;
+	U_Type userType;
+}User;
+
 /* Exported functions */
 uint8_t CheckForUserInput(void);
 

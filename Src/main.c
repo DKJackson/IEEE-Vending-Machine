@@ -45,34 +45,6 @@ volatile uint32_t lastActivityTick = 0;	//tick count of last activity by user (t
 
 volatile uint32_t oneDTick, fiveDTick, tenDTick, twentyDTick;	//tick count of last $1,$5,$10,$20 input
 
-//Structure for stocked items
-struct Item
-{
-	uint8_t itemID;	//Same as motor ID.  Also, same as index for item array.  Why is this here?  Because.
-	uint8_t itemCost;	//Self explanatory. Seriously, why are you reading this?
-	uint8_t itemCount; //number in stock
-};
-
-struct Item item[NUM_ITEMS];
-
-typedef enum User_Type
-{
-	USER,
-	ADMIN
-}U_Type;
-
-	
-//Structure for user accounts
-struct User
-{
-	uint8_t studentID;
-	uint8_t wildcatNum;
-	float balance;
-	U_Type userType;
-};
-
-struct User usr;
-
 enum Button_Area
 {
 	SELECT,
@@ -92,8 +64,10 @@ char *amount = "";					  // Money to credit to the account
 char *fileName;								  // Name of file to read or write
 uint8_t *amountOnCard;					// Money on Card
 
+User *usr;
 
-char* password = "12345";
+
+//char* password = "12345";
 int j = 0;
 
 /* Flags */
@@ -270,25 +244,34 @@ int main(void)
 					fileName = (char*)&selectDisp+1;
 					strncat (fileName, ".TXT", 4);
 					//writeFile((uint8_t*)amount, (char*) fileName);
-					amountOnCard = readFile((char*) fileName);
+					//amountOnCard = readFile((char*) fileName);
 					// File Does Not Exist
-					if(amountOnCard == (uint8_t*)'X')
+/*					if(amountOnCard == (uint8_t*)'X')
 					{
-						usr.balance += 0;
+						usr->balance += 0;
 					}
+*/
+					usr =  readFile((char*) fileName);
 					
 					// Find out how much money is on the account
+					
+					if(!usr)
+					{
+						Error_Handler();
+					}
+/*					
 					else
 					{
 						for(int i=3 ; i >= 0; i--)
 						{
 							if(amountOnCard[i] != NULL)
 							{
-								usr.balance += (pow(10,j) * (amountOnCard[i] - 48));
+								usr->balance += (pow(10,j) * (amountOnCard[i] - 48));
 								j +=1;
 							}
 						}
 					}
+*/
 					updateBalance = 1;
 					// Clear Display Values
 					for(int i=0; i <= 8; i++)
@@ -336,7 +319,7 @@ int main(void)
 			
 			// Display cost in red or green based on balance and the price of the item
 			BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-			if(usr.balance < cost)
+			if(usr->balance < cost)
 				BSP_LCD_SetTextColor(LCD_COLOR_RED);
 			else
 				BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
@@ -432,12 +415,12 @@ int main(void)
 					// Valid Selection
 					if(selectDisp[0] != (uint8_t) '_' && selectDisp[1] != (uint8_t) '_')
 					{
-						if(usr.balance >= cost)
+						if(usr->balance >= cost)
 						{
 							// Vend item
-							usr.balance -= cost;
+							usr->balance -= cost;
 							//amount = (char*)balance;
-							writeFile((uint8_t*)&(usr.balance), (char*) fileName);
+							writeFile(usr, (char*) fileName);
 							state = SLIDE_CARD;
 						}
 					}
@@ -543,7 +526,7 @@ int main(void)
 				//confirmation button pressed
 				if(selectionPressed == (uint8_t)'>')
 				{
-					if(usr.balance >= cost)
+					if(usr->balance >= cost)
 					{
 						//get id of motor to turn
 						motorId = getItemId(selectDisp);
@@ -554,7 +537,7 @@ int main(void)
 							//Decrement item count
 							item[motorId].itemCount--;
 							
-							usr.balance -= cost;
+							usr->balance -= cost;
 							
 						
 							writeFile((uint8_t*)&usr, (char*) fileName);
@@ -589,7 +572,7 @@ int main(void)
 			{
 				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
 				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				sprintf((char*)text, "$%0.2f",usr.balance);
+				sprintf((char*)text, "$%0.2f",usr->balance);
 				BSP_LCD_DisplayStringAt(10, 172, (uint8_t*) text, LEFT_MODE);
 				
 				/**************************write usr to file**********************************/
@@ -625,7 +608,7 @@ int main(void)
 		{
 			
 			
-			if(usr.userType != ADMIN)
+			if(usr->userType != ADMIN)
 			{
 				state = SELECTION;
 				continue;
@@ -874,7 +857,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - oneDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				usr.balance += 1;
+				usr->balance += 1;
 			}
 		}
 		
@@ -889,7 +872,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_9) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				usr.balance += 1;
+				usr->balance += 1;
 			}
 		}
 		
@@ -913,7 +896,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - fiveDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				usr.balance += 5;
+				usr->balance += 5;
 			}
 		}
 		
@@ -927,7 +910,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOB,GPIO_PIN_8) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				usr.balance += 5;
+				usr->balance += 5;
 			}
 		}
 		
@@ -950,7 +933,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - tenDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				usr.balance += 10;
+				usr->balance += 10;
 			}
 		}
 		// Wait 90 ms and make sure pin is still low (low for 100 ms if bill inserted)
@@ -970,7 +953,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_7) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				usr.balance += 10;
+				usr->balance += 10;
 			}
 		}
 		
@@ -994,7 +977,7 @@ void EXTI9_5_IRQHandler(void)
 			if(tickCount - twentyDTick > BA_LOW_TIME)
 			{
 				updateBalance = 1;
-				usr.balance += 20;
+				usr->balance += 20;
 			}
 		}
 		
@@ -1008,7 +991,7 @@ void EXTI9_5_IRQHandler(void)
 			if(HAL_GPIO_ReadPin(GPIOC,GPIO_PIN_6) == GPIO_PIN_SET)
 			{
 				updateBalance = 1;
-				usr.balance += 20;
+				usr->balance += 20;
 			}
 		}
 	
