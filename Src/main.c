@@ -6,99 +6,6 @@
 #include "database.h"
 #include <math.h>
 
-/*********************** FAT FS Stuff ************************
-FATFS SD_FatFs;  // File system object for SD card logical drive 
-char SD_Path[4]; // SD card logical drive path 
-char* pDirectoryFiles[MAX_BMP_FILES];
-uint8_t  ubNumberOfFiles = 0;
-uint32_t uwBmplen = 0;
-**************************************************************/
-
-/* Define the addresses of all my states */
-#define Blank 	&administrator[0] 
-#define E1 		&administrator[1] 
-#define E2		&administrator[2]
-#define C		&administrator[3]
-#define E3		&administrator[4]
-
-static TS_StateTypeDef  TS_State;
-enum STATE{SLEEP,SLIDE_CARD,SELECTION,STOCK,DONE};
-
-/* Global Variables */
-uint8_t  status = 0;						// Push button status
-volatile uint16_t x, y; 									// x,y location of touch input
-float cost = 0.00; 							// Selected item cost
-//float balance = 0.00;						// Current balance
-volatile enum STATE state = SLIDE_CARD;   // UI state
-enum STATE prevState = SLEEP;   // Previous UI state
-uint8_t  text[30] = {0,0};  		// Text buffer for display
-uint8_t selectionPressed = NULL;// Input selection
-char* received_data;						// Characters recieved from UART transfer
-uint8_t selectDisp[9] = {(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',
-(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_'};  //display of selection
-char* passkey; //password selection
-uint8_t passkeyIdx = 0;	//current index of admin passcode
-volatile uint32_t tickCount;		// counter for 1ms timers
-volatile uint32_t	lastTouch = 0;		// tick count of last touch detected on touchscreen
-volatile uint32_t baTick = 0;				// tick count of last input detected from bill acceptor
-volatile uint32_t lastActivityTick = 0;	//tick count of last activity by user (to keep track of when to sleep)
-
-volatile uint32_t oneDTick, fiveDTick, tenDTick, twentyDTick;	//tick count of last $1,$5,$10,$20 input
-
-enum Button_Area
-{
-	SELECT,
-	PASS
-}buttonArea = SELECT;
-
-TIM_HandleTypeDef TimHandle;
-uint32_t uwPrescalerValue;
-
-static void motorPinsInit(void);
-uint8_t motorId = 0;
-static uint8_t getItemId(uint8_t selection[]);
-static void turnMotor(uint8_t motorId);
-unsigned int ind = 0;						// Index into state machine	
-int adminCheck = 0;							// Yes or No to entering as an admin
-char *amount = "";					  // Money to credit to the account
-char *fileName;								  // Name of file to read or write
-uint8_t *amountOnCard;					// Money on Card
-
-User *usr;
-
-
-//char* password = "12345";
-int j = 0;
-
-/* Flags */
-uint8_t updateBalance = 1;	    // Refresh balance display
-uint8_t updateCost = 1;					// Refresh cost display flag
-uint8_t updateSelection = 1;	  // Refresh selection display flag
-uint8_t updatePw = 1;						// Refresh password display flag
-uint8_t clear = 0;	            // Clear selection Flag
-uint8_t admin = 0;							// Admin Flag
-
-/* State Machine Declaration for Admin Access */
-struct state
-{
-	unsigned int access; //Access granted or not
-	struct state *next[5];
-};
-
-typedef struct state states_type;
-
-states_type administrator[9] = {
-{0,{Blank,Blank,Blank,Blank,E1}},
-{0,{Blank,Blank,Blank,Blank,E2}},
-{0,{Blank,Blank,C,Blank,Blank}},
-{0,{Blank,Blank,Blank,Blank,E3}},
-{1,{Blank,Blank,Blank,Blank,Blank}}};
-
-states_type *current_state = administrator;
-
-void billAcceptorInit(void);
-static void TIM7_Init(void);
-static void Error_Handler(void);
 	
 int main(void)
 {
@@ -115,6 +22,8 @@ int main(void)
 		item[i].itemCost = 0;
 		item[i].itemCount = 0;
 	}
+	
+	
 	
 	/* Configure the MPU attributes as Write Through */
 //  MPU_Config();
@@ -154,6 +63,10 @@ int main(void)
 	
 	/* Initialize the Fat File System Database on the SD card */
 	databaseInit();
+	
+	// Initialize adminState struct
+	adminStateInit();
+	
 	/* Ensure Touchscreen initialized properly */
   if (status != TS_OK)
   {
@@ -176,13 +89,15 @@ int main(void)
 				prevState = SLIDE_CARD;
 				drawCardFrame();			
 				BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
-			}						
-			/***********************************UPDATE SELECTION***********************************/			
+			}
+			/***********************************UPDATE SELECTION***********************************/
+			
 			if(x != 0 && y != 0)
-			{					
+			{
 				// Get the Button that was pressed
-				selectionPressed = checkButton(x,y,2);
+				selectionPressed = checkButton(x,y,CARD_SCREEN);
 				HAL_Delay(150);
+				
 				// Delete last character of selection
 				if(selectionPressed == (uint8_t) '<')
 				{
@@ -243,15 +158,15 @@ int main(void)
 					// Setup the name of the file which can only be 8 characters + ".TXT"
 					fileName = (char*)&selectDisp+1;
 					strncat (fileName, ".TXT", 4);
-					//writeFile((uint8_t*)amount, (char*) fileName);
-					//amountOnCard = readFile((char*) fileName);
+					//writeUser((uint8_t*)amount, (char*) fileName);
+					//amountOnCard = readUser((char*) fileName);
 					// File Does Not Exist
 /*					if(amountOnCard == (uint8_t*)'X')
 					{
 						usr->balance += 0;
 					}
 */
-					usr =  readFile((char*) fileName);
+					usr =  readUser((char*) fileName);
 					
 					// Find out how much money is on the account
 					
@@ -315,7 +230,10 @@ int main(void)
 			//displayCost(selectDisp[0],selectDisp[1]);
 			
 			// Get the cost of the selected item
-			cost = getCost(selectDisp[0],selectDisp[1]);
+			if(updateCost)
+			{
+				cost = getItem(selectDisp[0],selectDisp[1]);//getCost(selectDisp[0],selectDisp[1]);
+			}
 			
 			// Display cost in red or green based on balance and the price of the item
 			BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
@@ -349,7 +267,7 @@ int main(void)
 */				
 
 				// Get the Button that was pressed
-				selectionPressed = checkButton(x,y,1);
+				selectionPressed = checkButton(x,y,SELECTION_SCREEN);
 				
 				switch(selectionPressed)
 				{
@@ -420,7 +338,7 @@ int main(void)
 							// Vend item
 							usr->balance -= cost;
 							//amount = (char*)balance;
-							writeFile(usr, (char*) fileName);
+							writeUser(usr, (char*) fileName);
 							state = SLIDE_CARD;
 						}
 					}
@@ -540,7 +458,7 @@ int main(void)
 							usr->balance -= cost;
 							
 						
-							writeFile((uint8_t*)&usr, (char*) fileName);
+							writeUser((uint8_t*)&usr, (char*) fileName);
 							
 							state = SLIDE_CARD;
 								
@@ -1364,7 +1282,20 @@ static void Error_Handler(void)
 	}
 }
 
+void adminStateInit()
+{
+	for(uint8_t i = 0; i < ADMIN_PASS_SIZE; i++)
+	{
+		admin[i].access = 0;
+		admin[i].currKey = adminPass[i];
+		admin[i].nextAdminState = admin[i+1];
+	}
+	
+	admin[ADMIN_PASS_SIZE].access = 1;
+	admin[ADMIN_PASS_SIZE].nextAdminState = admin[0];
+}
 
+/*
 // Returns cost of slection passed in
 float getCost(uint8_t letter,uint8_t number)
 {
@@ -1405,9 +1336,7 @@ float getCost(uint8_t letter,uint8_t number)
 				case ((uint8_t) '3'):
 					retVal=item[6].itemCost;
 				break;
-/*				case ((uint8_t) '4'):
-					retVal=2;
-				break;*/
+
 				default:
 					retVal=0;
 			  break;
@@ -1429,9 +1358,7 @@ float getCost(uint8_t letter,uint8_t number)
 				case ((uint8_t) '3'):
 					retVal=item[10].itemCost;
 				break;
-/*				case ((uint8_t) '4'):
-					retVal=3;
-				break;*/
+
 				default:
 					retVal=0;
 			  break;
@@ -1461,34 +1388,11 @@ float getCost(uint8_t letter,uint8_t number)
 			  break;
 			}
 			break;
-/*			
-		case ((uint8_t) 'E'):
-			switch(number)
-			{
-				case ((uint8_t) '0'):
-					retVal=5;
-				break;
-				case ((uint8_t) '1'):
-					retVal=5;
-				break;
-				case ((uint8_t) '2'):
-					retVal=5;
-				break;
-				case ((uint8_t) '3'):
-					retVal=5;
-				break;
-				case ((uint8_t) '4'):
-					retVal=5;
-				break;
-				default:
-					retVal=0;
-			  break;
-			}
-			break;	
-*/			
+	
 		default:
 			retVal=0;
 		break;
 	}	
 	return retVal;
 }
+*/

@@ -5,10 +5,10 @@
 <h2>Tool Versions:</h2>
 IDE-Version: µVision V5.24.2.0
 Copyright (C) 2017 ARM Ltd and ARM Germany GmbH. All rights reserved.
-License Information: Dustin Jackson California State University, Chico Flex license: MDK-ARM Professional (mdk_pro) Borrow: 16 Sep 2017
+License Information: Dustin Jackson California State University, Chico Flex license: MDK-ARM Professional: 100 user(s) (mdk_pro) Borrow: 24 Dec 2017
  
 Tool Versions:
-Toolchain:       MDK-ARM Professional  Version: 5.24.1
+Toolchain:       MDK-ARM Professional: 100 user(s)  Version: 5.24.1
 Toolchain Path:  D:\Keil_v5\ARM\ARMCC\Bin
 C Compiler:      Armcc.exe V5.06 update 5 (build 528)
 Assembler:       Armasm.exe V5.06 update 5 (build 528)
@@ -27,10 +27,121 @@ Project File Date:  08/19/2017
 <h2>Output:</h2>
 *** Using Compiler 'V5.06 update 5 (build 528)', folder: 'D:\Keil_v5\ARM\ARMCC\Bin'
 Build target 'STM32746G_DISCOVERY'
+compiling database.c...
+..\Inc\main.h(43): error:  #40: expected an identifier
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(43): error:  #65: expected a ";"
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(104): error:  #20: identifier "adminState" is undefined
+  	adminState nextAdminState;
+..\Inc\main.h(107): error:  #147: declaration is incompatible with "uint8_t admin"  (declared at line 96)
+  AdminState admin[
+DMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+..\Inc\main.h(159): warning:  #1295-D: Deprecated declaration adminStateInit - give arg types
+  void adminStateInit();
+..\Src\database.c: 1 warning, 4 errors
+compiling uart.c...
+..\Inc\main.h(43): error:  #40: expected an identifier
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(43): error:  #65: expected a ";"
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(104): error:  #20: identifier "adminState" is undefined
+  	adminState nextAdminState;
+..\Inc\main.h(107): error:  #147: declaration is incompatible with "uint8_t admin"  (declared at line 96)
+  AdminState admin[
+DMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+..\Inc\main.h(159): warning:  #1295-D: Deprecated declaration adminStateInit - give arg types
+  void adminStateInit();
+..\Src\uart.c: 1 warning, 4 errors
+compiling stm32f7xx_hal_msp.c...
+..\Inc\main.h(43): error:  #40: expected an identifier
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(43): error:  #65: expected a ";"
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(104): error:  #20: identifier "adminState" is undefined
+  	adminState nextAdminState;
+..\Inc\main.h(107): error:  #147: declaration is incompatible with "uint8_t admin"  (declared at line 96)
+  AdminState admin[
+DMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+..\Inc\main.h(159): warning:  #1295-D: Deprecated declaration adminStateInit - give arg types
+  void adminStateInit();
+..\Src\stm32f7xx_hal_msp.c: 1 warning, 4 errors
+compiling stm32f7xx_it.c...
+..\Inc\main.h(43): error:  #40: expected an identifier
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(43): error:  #65: expected a ";"
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(104): error:  #20: identifier "adminState" is undefined
+  	adminState nextAdminState;
+..\Inc\main.h(107): error:  #147: declaration is incompatible with "uint8_t admin"  (declared at line 96)
+  AdminState admin[
+DMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+..\Inc\main.h(159): warning:  #1295-D: Deprecated declaration adminStateInit - give arg types
+  void adminStateInit();
+..\Src\stm32f7xx_it.c: 1 warning, 4 errors
 compiling main.c...
-linking...
-Program Size: Code=38548 RO-data=7720 RW-data=508 ZI-data=4204  
-"STM32746G_DISCOVERY\STM32746G_DISCOVERY.axf" - 0 Error(s), 0 Warning(s).
+..\Inc\main.h(43): error:  #40: expected an identifier
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(43): error:  #65: expected a ";"
+  char[
+DMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+..\Inc\main.h(104): error:  #20: identifier "adminState" is undefined
+  	adminState nextAdminState;
+..\Inc\main.h(107): error:  #147: declaration is incompatible with "uint8_t admin"  (declared at line 96)
+  AdminState admin[
+DMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+..\Inc\main.h(159): warning:  #1295-D: Deprecated declaration adminStateInit - give arg types
+  void adminStateInit();
+..\Src\main.c(235): warning:  #223-D: function "getItem" declared implicitly
+  				cost = getItem(selectDisp[0],selectDisp[1]);//getCost(selectDisp[0],selectDisp[1]);
+..\Src\main.c(296): error:  #20: identifier "current_state" is undefined
+  				current_state = current_state->next[ind];
+..\Src\main.c(461): error:  #167: argument of type "uint8_t *" is incompatible with parameter of type "struct User *"
+  							writeUser((uint8_t*)&usr, (char*) fileName);
+..\Src\main.c(561): error:  #20: identifier "buttonArea" is undefined
+  							buttonArea = SELECT;
+..\Src\main.c(561): error:  #20: identifier "SELECT" is undefined
+  							buttonArea = SELECT;
+..\Src\main.c(567): error:  #20: identifier "buttonArea" is undefined
+  							buttonArea = PASS;
+..\Src\main.c(567): error:  #20: identifier "PASS" is undefined
+  							buttonArea = PASS;
+..\Src\main.c(572): error:  #20: identifier "buttonArea" is undefined
+  							if(buttonArea == SELECT)
+..\Src\main.c(572): error:  #20: identifier "SELECT" is undefined
+  							if(buttonArea == SELECT)
+..\Src\main.c(1289): error:  #142: expression must have pointer-to-object type
+  		admin[i].access = 0;
+..\Src\main.c(1290): error:  #142: expression must have pointer-to-object type
+  		admin[i].currKey = adminPass[i];
+..\Src\main.c(1290): error:  #20: identifier "adminPass" is undefined
+  		admin[i].currKey = adminPass[i];
+..\Src\main.c(1291): error:  #142: expression must have pointer-to-object type
+  		admin[i].nextAdminState = admin[i+1];
+..\Src\main.c(1291): error:  #142: expression must have pointer-to-object type
+  		admin[i].nextAdminState = admin[i+1];
+..\Src\main.c(1294): error:  #142: expression must have pointer-to-object type
+  	admin[
+DMIN_PASS_SIZE].access = 1;
+..\Src\main.c(1295): error:  #142: expression must have pointer-to-object type
+  	admin[
+DMIN_PASS_SIZE].nextAdminState = admin[0];
+..\Src\main.c(1295): error:  #142: expression must have pointer-to-object type
+  	admin[
+DMIN_PASS_SIZE].nextAdminState = admin[0];
+..\Src\main.c(1398): warning:  #1-D: last line of file ends without a newline
+  */
+..\Src\main.c: 3 warnings, 20 errors
+"STM32746G_DISCOVERY\STM32746G_DISCOVERY.axf" - 36 Error(s), 7 Warning(s).
 
 <h2>Software Packages used:</h2>
 
@@ -53,7 +164,8 @@ Package Vendor: Keil
 <h2>Collection of Component Files used:</h2>
 
    * Component: ARM::CMSIS:CORE:5.0.1
-Build Time Elapsed:  00:00:02
+Target not created.
+Build Time Elapsed:  00:00:03
 </pre>
 </body>
 </html>

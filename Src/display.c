@@ -119,8 +119,6 @@ uint8_t getButtonDef(uint8_t row,uint8_t column,uint8_t screen)
 	uint8_t retVal;
 	// Screen = 1 is the Selection Screen
 	if(screen == 1)
-
-
 	{
 		switch(row)
 		{
@@ -278,10 +276,6 @@ uint8_t getButtonDef(uint8_t row,uint8_t column,uint8_t screen)
 
 			break;
 		}
-
-
-
-
 	}
 
 	return retVal;

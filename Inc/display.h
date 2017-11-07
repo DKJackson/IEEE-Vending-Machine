@@ -15,6 +15,8 @@
 #define  BUTTON_YPOS(i)       (50+((BUTTON_SIZE+10)*i)) //y position for buttons
 #define  PASS_BUTTON_XPOS(j)  (48+((PASS_BUTTON_SIZE+5)*j))	//x position for passkey buttons
 #define  PASS_BUTTON_YPOS(i)  (152+((PASS_BUTTON_SIZE+5)*i))	//y position for passkey buttons
+#define  SELECTION_SCREEN			1 //screen definition for item selection
+#define  CARD_SCREEN					2 //screen definition for slide card
 
 #define A_BUTTON_XPOS		20
 #define A_BUTTON_YPOS		(BSP_LCD_GetYSize() - 40)
@@ -27,7 +29,7 @@ uint8_t checkButton(uint16_t xCoord, uint16_t yCoord, uint8_t screen);
 uint8_t getButtonDef(uint8_t row,uint8_t column, uint8_t screen);
 void drawKeypad(void);
 void drawDisplayFrame(void);
-float getCost(uint8_t letter,uint8_t number);
+
 uint8_t validateSelection(uint8_t selectionPressed, uint8_t selectionIndx);
 //void drawAdmin(void);
 void drawAdminDispFrame(void);

@@ -2,11 +2,6 @@
 #include "main.h"
 #include "database.h"
 
-void databaseInit(void);
-static void Error_Handler(void);
-void writeFile(uint8_t *text, char *fileName);
-uint8_t* readFile(char *fileName);
-
 FATFS SDFatFs;  /* File system object for SD card logical drive */
 FIL MyFile;     /* File object */
 char SDPath[4]; /* SD card logical drive path */
@@ -35,7 +30,7 @@ void databaseInit(void)
 		***************************************************************/
 	}
 }
-void writeFile(User *user, char *fileName)
+void writeUser(User *user, char *fileName)
 {
 	FRESULT res;                            // FatFs function common result code
   uint32_t byteswritten;					        // File write/read counts
@@ -67,7 +62,7 @@ void writeFile(User *user, char *fileName)
 	}
 }
 
-User* readFile(char *fileName)
+User* readUser(char *fileName)
 {
 	FRESULT res;                            // FatFs function common result code
   uint32_t bytesread;       							// File write/read counts

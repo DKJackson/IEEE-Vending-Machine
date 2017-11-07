@@ -3,7 +3,9 @@
 #define __DATABASE_H
 
 void databaseInit(void);
-void writeFile(User *user, char *fileName);
-struct User* readFile(char *fileName);
+void writeUser(struct User *user, char *fileName);
+void writeItem(struct Item *item, char *fileName);
+struct User* readUser(char *fileName);
+struct Item* readItem(char *fileName);
 
 #endif 
