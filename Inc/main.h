@@ -16,12 +16,11 @@
 #include "display.h"
 #include "configurations.h"
 
-/* FatFs includes component */
+/* FatFs includes */
 #include "ff_gen_drv.h"
 #include "sd_diskio.h"
 	 
 /* Definitions */
-#define PASSLEN		5
 #define	NUM_MOTORS 16			//max number of motors
 #define	TOUCH_DEADBAND 200	//msec delay so multiple touches aren't detected quickly
 #define	BA_LOW_TIME 90	//msec delay to determine if a bill has been inserted
@@ -36,24 +35,35 @@
 #define E3		&administrator[4]
 */
 
-#define ADMIN_PASS				{'E','E','C','E'}
-#define ADMIN_PASS_SIZE		4
+#define ADMIN_PASS				"EECE"	//must be A-E, 0-4
+#define ADMIN_PASS_SIZE		4		//number of characters of admin password
+#define FILENAME_SIZE 		16  //number of characters of filename
+#define SELECTDISP_SIZE 	9		//number of characters of selection display
+#define TEXT_SIZE					30	//number of characters of text buffer
+#define SELECTION_SIZE		2		//number of characters of selection
 
 /* Global Variables */
-char[ADMIN_PASS_SIZE] adminPass = ADMIN_PASS;
+const char* adminPass = ADMIN_PASS;
+
+/* State Machine Declaration for Admin Access */
+typedef struct AdminState
+{
+	uint8_t access; //Access granted or not
+	char currKey;
+	adminState *nextAdminState;
+}AdminState;
+
+AdminState *admin[ADMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
+AdminState *currAdminState = admin[0];
+
 uint8_t  status = 0;						// Push button status
 volatile uint16_t x, y; 					// x,y location of touch input
-float cost = 0.00; 							// Selected item cost
-//float balance = 0.00;						// Current balance
 
-uint8_t  text[30] = {0,0};  		// Text buffer for display
-uint8_t selectionPressed = NULL;// Input selection
+char  *text;  		// Text buffer for display
+char selectionPressed = NULL;// Input selection
 //char* received_data;						// Characters recieved from UART transfer
-uint8_t selectDisp[9] = {(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',
-(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_',(uint8_t)'_'};  //display of id selection
+char *selectDisp;  //display of id selection
 
-//char* passkey; //password selection
-//uint8_t passkeyIdx = 0;	//current index of admin passcode
 volatile uint32_t tickCount;		// counter for 1ms timers
 volatile uint32_t	lastTouch = 0;		// tick count of last touch detected on touchscreen
 volatile uint32_t baTick = 0;				// tick count of last input detected from bill acceptor
@@ -77,34 +87,12 @@ TIM_HandleTypeDef TimHandle;
 uint32_t uwPrescalerValue;
 
 uint8_t motorId = 0;
-unsigned int ind = 0;						// Index into state machine	
-int adminCheck = 0;							// Yes or No to entering as an admin
-char *amount = "";					  // Money to credit to the account
-char *fileName;								  // Name of file to read or write
-//uint8_t *amountOnCard;					// Money on Card
-
-
-//char* password = "12345";
-int j = 0;
+char *fileName; // Name of file to read or write
 
 /* Flags */
 uint8_t updateBalance = 1;	    // Refresh balance display
 uint8_t updateCost = 1;					// Refresh cost display flag
 uint8_t updateSelection = 1;	  // Refresh selection display flag
-uint8_t updatePw = 1;						// Refresh password display flag
-uint8_t clear = 0;	            // Clear selection Flag
-uint8_t admin = 0;							// Admin Flag
-
-	
-/* State Machine Declaration for Admin Access */
-typedef struct AdminState
-{
-	uint8_t access; //Access granted or not
-	uint8_t currKey;
-	adminState nextAdminState;
-}AdminState;
-
-AdminState admin[ADMIN_PASS_SIZE + 1]; //array of administrator states, one for each pass letter, last for admin granted
 
 /*
 typedef struct state states_type;
@@ -120,14 +108,15 @@ states_type *current_state = administrator;
 */
 
 //Structure for stocked items
-struct Item
+typedef struct Item
 {
-	uint8_t itemID;	//Same as motor ID.  Also, same as index for item array.  Why is this here?  Because.
-	uint8_t itemCost;	//Self explanatory. Seriously, why are you reading this?
+	uint8_t itemID;	//Same as motor ID.
+	char *selectionNum; //selection number for file name
+	float itemCost;	//Self explanatory. Seriously, why are you reading this?
 	uint8_t itemCount; //number in stock
-};
+}Item;
 
-struct Item item[NUM_ITEMS];
+Item *item;
 
 //user type is regular user or administrator
 typedef enum User_Type
@@ -156,7 +145,12 @@ void billAcceptorInit(void);
 static void TIM7_Init(void);
 static void Error_Handler(void);
 //float getCost(uint8_t letter,uint8_t number);
-void adminStateInit();
+void adminStateInit(void);
+void textInit(void);
+uint8_t validateSelection(char selectionPressed, uint8_t selectionIndx);
+uint8_t checkButton(uint16_t xCoord, uint16_t yCoord, uint8_t screen);
+uint8_t getButtonDef(uint8_t row,uint8_t column, uint8_t screen);
+void drawKeypad(uint8_t screen);
 
 #ifdef __cplusplus
 }

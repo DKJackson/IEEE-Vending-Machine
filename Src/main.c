@@ -55,6 +55,9 @@ int main(void)
 	/* Clear the LCD */
   clearScreen();
 	
+	/* Allocate memory for text */
+	textInit();
+	
   /* Initialize Touchscreen */	
 	status = BSP_TS_Init(BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
 	
@@ -64,7 +67,7 @@ int main(void)
 	/* Initialize the Fat File System Database on the SD card */
 	databaseInit();
 	
-	// Initialize adminState struct
+	/* Initialize adminState structs */
 	adminStateInit();
 	
 	/* Ensure Touchscreen initialized properly */
@@ -87,15 +90,15 @@ int main(void)
 			if(prevState != SLIDE_CARD)
 			{
 				prevState = SLIDE_CARD;
-				drawCardFrame();			
-				BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
+				drawCardFrame();
 			}
+			
 			/***********************************UPDATE SELECTION***********************************/
 			
 			if(x != 0 && y != 0)
 			{
 				// Get the Button that was pressed
-				selectionPressed = checkButton(x,y,CARD_SCREEN);
+				selectionPressed = checkButton(x,y,DIGIT_SCREEN);
 				HAL_Delay(150);
 				
 				// Delete last character of selection
@@ -112,6 +115,7 @@ int main(void)
 					}
 					clear = 1;
 				}
+				
 				// Delete entire selection
 				else if(selectionPressed == (uint8_t) 'X')
 				{
@@ -120,21 +124,28 @@ int main(void)
 						selectDisp[i] = (uint8_t) '_';
 					}
 					clear = 1;
-				}		
-				// Update ID Number on Screen
-				for(int i=0; i <= 8; i++)
-				{
-					if(clear == 1 || selectionPressed == (uint8_t) '>')
-						break;
-					if(selectDisp[i] == (uint8_t)'_')
-					{
-						selectDisp[i] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-						updateSelection = 1;
-						break;
-					}			
 				}
+				
+				// Update ID Number on Screen
+				if(!clear)
+				{
+					for(int i=0; i <= 8; i++)
+					{
+						if(selectionPressed == (uint8_t) '>')
+							break;
+						if(selectDisp[i] == (uint8_t)'_')
+						{
+							selectDisp[i] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
+							updateSelection = 1;
+							break;
+						}
+					}
+				}
+				
 				// Clear touch coordinates and button pressed flag
-				x = 0; y = 0; clear = 0;
+				x = 0;
+				y = 0;
+				
 				// Go to item selection
 				if(selectDisp[8] != (uint8_t) '_' && selectionPressed == (uint8_t) '>')
 				{
@@ -146,17 +157,8 @@ int main(void)
 					
 					
 					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					// Setup the name of the file which can only be 8 characters + ".TXT"
-					fileName = (char*)&selectDisp+1;
+					fileName = (char*)&selectDisp;
 					strncat (fileName, ".TXT", 4);
 					//writeUser((uint8_t*)amount, (char*) fileName);
 					//amountOnCard = readUser((char*) fileName);
@@ -188,323 +190,241 @@ int main(void)
 					}
 */
 					updateBalance = 1;
+					
 					// Clear Display Values
 					for(int i=0; i <= 8; i++)
 					{
 						selectDisp[i] = (uint8_t) '_';
 					}
 				}
+				
 				selectionPressed = NULL;						
 			}
+			
 			/***********************************************************************************/
-			if(updateSelection == 1)
+			if(updateSelection)
 			{
-				sprintf((char*)text, "%c%c%c%c%c%c%c%c%c",selectDisp[0],selectDisp[1],selectDisp[2],selectDisp[3],
-				selectDisp[4],selectDisp[5],selectDisp[6],selectDisp[7],selectDisp[8]);
+				sprintf(text, "%s",selectDisp);
 				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
 				BSP_LCD_DisplayStringAt(5, 120, (uint8_t*) text, LEFT_MODE);
 			}
 		}
 		
-		
 		// When touch occurs
 		while(state == SELECTION)
 		{
+			//no user selected
+			if(!usr)
+			{
+				state = SLIDE_CARD;
+				prevState = SELECTION;
+				continue;
+			}
+			
 			// Draw the UI if state has changed
 			if(prevState != SELECTION)
 			{
+				selectDisp = "_________";
 				prevState = SELECTION; // Ensure we dont redraw the UI unless necesarry				
 				drawDisplayFrame();		 // Render display frame
-				drawKeypad();					 // Render selection buttons
+				currAdminState = admin[0];	// Reset admin passkey state
+				showBalanceArea();	// Render user balance display
+				currScreen = SELECTION_SCREEN;	// Set current screen for input buttons
+				drawKeypad(currScreen);					 // Render selection buttons
 				
-				//Render Balance area
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				BSP_LCD_DisplayStringAt(10, 150, (uint8_t*) "Balance", LEFT_MODE);
-				BSP_LCD_DisplayStringAt(A_BUTTON_XPOS, A_BUTTON_YPOS, (uint8_t*) "*", LEFT_MODE);
-					
-				BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
-									
+				updateBalance = 1;
+				updateCost = 1;
+				updateSelection = 1;
 			}
-			
-			//displayCost(selectDisp[0],selectDisp[1]);
 			
 			// Get the cost of the selected item
 			if(updateCost)
 			{
-				cost = getItem(selectDisp[0],selectDisp[1]);//getCost(selectDisp[0],selectDisp[1]);
+				if(usr && item)
+				{
+					updateCostDisp(usr->balance,item->itemCost,0);
+				}
+				
+				else
+				{
+					updateCostDisp(0.00,0.00,0);
+				}
+				
+				updateCost = 0;
 			}
 			
-			// Display cost in red or green based on balance and the price of the item
-			BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-			if(usr->balance < cost)
-				BSP_LCD_SetTextColor(LCD_COLOR_RED);
-			else
-				BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
-			
-			// Display cost of selected item
-			sprintf((char*)text, "$%0.2f",cost);
-			BSP_LCD_DisplayStringAt(10, 115, (uint8_t*) text, LEFT_MODE);
-			BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-			BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-			BSP_LCD_SetFont(&Font24);	
-			
-//			if(updateKeypad == 1)
-//			{	
-//			}
-			
-			
-			// If button press detected
-			if(x != 0 && y != 0)
+			// Display updated balance			
+			if(updateBalance)
 			{
-/*				if(x >= A_BUTTON_XPOS && x <= A_BUTTON_XPOS + 20 && y >= A_BUTTON_YPOS - 24 && y <= A_BUTTON_YPOS)
+				if(usr)
 				{
-					x = 0;
-					y = 0;
-					state = STOCK;
-					continue;
-				}
-*/				
-
-				// Get the Button that was pressed
-				selectionPressed = checkButton(x,y,SELECTION_SCREEN);
-				
-				switch(selectionPressed)
-				{
-					case ((uint8_t)'A'):
-						ind = 0;
-					break;
-					case ((uint8_t)'B'):
-						ind = 1;
-					break;
-					case ((uint8_t)'C'):
-						ind = 2;
-					break;
-					case ((uint8_t)'D'):
-						ind = 3;
-					break;
-					case ((uint8_t)'E'):
-						ind = 4;
-					break;
-					default:
-						ind = 0;
-					break;
+					updateBalanceDisp(usr->balance);
 				}
 				
-				HAL_Delay(150);
-				
-				current_state = current_state->next[ind];
-				
-				if(current_state->access == 1)
-					state = STOCK;
-				// Delete last character of selection
-				if(selectionPressed == (uint8_t) '<')
+				else
 				{
-					if(selectDisp[1] != (uint8_t) '_')
-					{
-						selectDisp[1] = (uint8_t) '_';
-						updateSelection = 1;
-					}
-
-					else if(selectDisp[0] != (uint8_t) '_')
-					{
-						selectDisp[0] = (uint8_t) '_';
-						updateSelection = 1;
-					}
-
-					clear = 1;
-
-					HAL_Delay(100);
+					updateBalanceDisp(0.00);
 				}
-
-				// Delete entire selection
-				else if(selectionPressed == (uint8_t) 'X')
-				{
-					selectDisp[1] = (uint8_t) '_';
-					selectDisp[0] = (uint8_t) '_';
-
-					clear = 1;
-
-
-				}		
-				// Vend Item if available and sufficient funds
-				else if(selectionPressed == (uint8_t) '>')
-				{
-					// Valid Selection
-					if(selectDisp[0] != (uint8_t) '_' && selectDisp[1] != (uint8_t) '_')
-					{
-						if(usr->balance >= cost)
-						{
-							// Vend item
-							usr->balance -= cost;
-							//amount = (char*)balance;
-							writeUser(usr, (char*) fileName);
-							state = SLIDE_CARD;
-						}
-					}
-					selectDisp[1] = (uint8_t) '_';
-					selectDisp[0] = (uint8_t) '_';
-					clear = 1;
-				}				
-				// Validate that selection is valid for the selection place
-				// ie selectDisp[0] must be A-E, < ,X, or >, selectDisp[1] must be 0-4, < ,X , or >
-				if(selectDisp[0] == (uint8_t) '_')
-				{
-					if(selectionPressed != (uint8_t) 'A' && selectionPressed != (uint8_t) 'B' && selectionPressed != (uint8_t) 'C' 
-					&& selectionPressed != (uint8_t) 'D' && selectionPressed != (uint8_t) 'E')
-					{
-						selectionPressed = NULL;
-					}
-				}
-
-				else if(selectDisp[1] == (uint8_t) '_')
-				{
-					if(selectionPressed != (uint8_t) '0' && selectionPressed != (uint8_t) '1' && selectionPressed != (uint8_t) '2' 
-
-
-					&& selectionPressed != (uint8_t) '3' && selectionPressed != (uint8_t) '4')
-					{
-						selectionPressed = NULL;
-					}
-				}					
-				// Assign 1st selection if valid button was pressed
-				if(selectDisp[0] == (uint8_t)'_' && clear != 1)
-				{
-					selectDisp[0] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-					updateSelection = 1;
-
-
-				}				
-				// Assign 2nd selection if valid button was pressed
-				else if(selectDisp[1] == (uint8_t)'_' && clear != 1)
-				{
-					selectDisp[1] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-					updateSelection = 1;						
-
-				}					
-				// Clear touch coordinates and button pressed flag
-				x = 0; y = 0; clear = 0;						
-
-
-				selectionPressed = NULL;
-				
-				// Delete last character of selection
-				if(selectionPressed == (uint8_t) '<')
-				{
-					if(selectDisp[1] != (uint8_t) '_')
-					{
-						selectDisp[1] = (uint8_t) '_';
-					}
-					
-					else if(selectDisp[0] != (uint8_t) '_')
-					{
-						selectDisp[0] = (uint8_t) '_';
-					}
-					
-					clear = 1;
-					updateSelection = 1;
-					HAL_Delay(100);
-				}
-				
-				// Delete entire selection
-				else if(selectionPressed == (uint8_t) 'X')
-				{
-					selectDisp[1] = (uint8_t) '_';
-					selectDisp[0] = (uint8_t) '_';
-					updateSelection = 1;
-					clear = 1;
-				}
-				
-				// Validate that selection is valid for the selection place
-				// ie selectDisp[0] must be A-E selectDisp[1] must be 0-4
-				if(selectDisp[0] == (uint8_t) '_')
-				{
-					selectionPressed = validateSelection(selectionPressed,0) ? selectionPressed : NULL;
-				}
-				
-				else if(selectDisp[1] == (uint8_t) '_')
-				{
-					selectionPressed = validateSelection(selectionPressed,1) ? selectionPressed : NULL;
-				}
-				
-				// Assign 1st selection if valid button was pressed
-				if(selectDisp[0] == (uint8_t)'_' && clear != 1)
-				{
-					selectDisp[0] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-					updateSelection = 1;
-				}
-				
-				// Assign 2nd selection if valid button was pressed
-				else if(selectDisp[1] == (uint8_t)'_' && clear != 1)
-				{
-					selectDisp[1] = (selectionPressed == NULL) ? (uint8_t)'_' : selectionPressed;
-					updateSelection = 1;						
-				}
-				
-				//confirmation button pressed
-				if(selectionPressed == (uint8_t)'>')
-				{
-					if(usr->balance >= cost)
-					{
-						//get id of motor to turn
-						motorId = getItemId(selectDisp);
-						
-						//selection has been made, so turn motors if balance is greater than or equal to cost
-						if(motorId != NULL)
-						{
-							//Decrement item count
-							item[motorId].itemCount--;
-							
-							usr->balance -= cost;
-							
-						
-							writeUser((uint8_t*)&usr, (char*) fileName);
-							
-							state = SLIDE_CARD;
-								
-							//turn motors
-							turnMotor(motorId);
-						}
-					}
-				}
-				
-				// Clear touch coordinates, selection clear flag and button pressed flag
-				x = 0;
-				y = 0;
-				clear = 0;
-				selectionPressed = NULL;						
-			}
-		
-			// When valid button pressed display selections
-			if(updateSelection == 1)
-			{
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				sprintf((char*)text, "%c%c",selectDisp[0],selectDisp[1]);
-				BSP_LCD_DisplayStringAt(10, 58, (uint8_t*) text, LEFT_MODE);
-				updateSelection = 0;
-			}
-			
-			// When money inserted display updated balance			
-			if(updateBalance == 1)
-			{
-				BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-				BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-				sprintf((char*)text, "$%0.2f",usr->balance);
-				BSP_LCD_DisplayStringAt(10, 172, (uint8_t*) text, LEFT_MODE);
-				
-				/**************************write usr to file**********************************/
-				
-				
-				
-				
-				
-				
-				
 				
 				updateBalance = 0;
 			}
 			
+			// When valid button pressed display selections
+			if(updateSelection)
+			{
+				updateSelectionDisp(selectDisp[0],selectDisp[1], 0);
+				
+				if(selectDisp[0] != '_' && selectDisp[1] != '_')
+				{
+					sprintf(fileName,"%c%c",selectDisp[0],selectDisp[1]);
+					item = readItem(fileName);	//retrieve item info from storage
+				}
+				
+				else
+				{
+					item = NULL;
+				}
+				
+				updateSelection = 0;
+			}
+			
+			// If button press detected
+			if(x != 0 && y != 0)
+			{
+				// Get the Button that was pressed
+				selectionPressed = checkButton(x,y,currScreen);
+				
+				// Delete last character of selection
+				if(selectionPressed == '<')
+				{
+					if(selectDisp[1] != '_')
+					{
+						selectDisp[1] = '_';
+					}
+
+					else if(selectDisp[0] != '_')
+					{
+						selectDisp[0] = '_';
+					}
+
+					item = NULL;
+					updateSelection = 1;
+					updateCost = 1;
+					
+					currAdminState = admin[0];
+					
+					HAL_Delay(100);
+				}
+				
+				// Return to slide card screen
+				else if(selectionPressed == (uint8_t) 'X')
+				{
+					selectDisp = "_________";
+					currAdminState = admin[0];
+					item = NULL;
+					usr = NULL;
+					state = SLIDE_CARD;
+					prevState = SELECTION;
+					selectionPressed = NULL;
+					
+					continue;
+				}
+				
+				// Vend Item if available and sufficient funds
+				else if(selectionPressed == '>')
+				{
+					currAdminState = admin[0];
+					
+					// Valid Selection
+					if(usr && item)
+					{
+						if(usr->balance >= item->itemCost && item->itemCount > 0)
+						{
+							
+							//get id of motor to turn
+							motorId = item->itemID;
+							
+							// Vend item
+							usr->balance -= item->itemCost;
+							updateBalance = 1;
+							item->itemCount--;
+							
+							//turn motors
+							turnMotor(motorId);
+							
+							// update user and item files
+							sprintf(fileName,"%d",usr->studentID);
+							writeUser(usr, fileName);
+							sprintf(fileName,"%d",item->itemID);
+							writeItem(item, fileName);
+							
+							item = NULL;
+							updateSelection = 1;
+						}
+						
+						else if(item->itemCount <= 0)
+						{
+							//display "Try another selection."
+							text = "Item out of stock.";
+							
+							
+							
+							text = "Try another selection.";
+							
+							
+							
+						}
+						
+						else if(usr->balance < item->itemCost)
+						{
+							text = "Add more money to account.";
+							
+							
+							
+							
+						}
+					}
+					
+					selectDisp = "_________";
+				}
+				
+				else
+				{
+					//check admin passkey
+					if(selectionPressed == currAdminState->currKey)
+					{
+						currAdminState = currAdminState->nextAdminState;
+						
+						if(currAdminState->access)
+						{
+							state = STOCK;
+							selectionPressed = NULL;
+							continue;
+						}
+					}
+						
+					// Validate that selection is valid for the selection place
+					// ie selectDisp[0] must be A-E selectDisp[1] must be 0-4
+					if(selectDisp[0] == '_')
+					{
+						selectionPressed = validateSelection(selectionPressed,0) ? selectionPressed : NULL;
+						selectDisp[0] = (selectionPressed == NULL) ? '_' : selectionPressed;
+						updateSelection = 1;
+					}
+					
+					else if(selectDisp[1] == '_')
+					{
+						selectionPressed = validateSelection(selectionPressed,1) ? selectionPressed : NULL;
+						selectDisp[1] = (selectionPressed == NULL) ? '_' : selectionPressed;
+						updateSelection = 1;
+					}
+				}
+				
+				selectionPressed = NULL;
+				
+				x = 0;
+				y = 0;
+			}
 		}
 		
 		// Shut down UI and	Enable Low Power Mode	::UNUSED
@@ -525,13 +445,11 @@ int main(void)
 		while(state == STOCK)
 		{
 			
-			
-			if(usr->userType != ADMIN)
+			if(!usr || usr->userType != ADMIN)
 			{
 				state = SELECTION;
 				continue;
 			}
-			
 			
 			else
 			{
@@ -1286,113 +1204,310 @@ void adminStateInit()
 {
 	for(uint8_t i = 0; i < ADMIN_PASS_SIZE; i++)
 	{
-		admin[i].access = 0;
-		admin[i].currKey = adminPass[i];
-		admin[i].nextAdminState = admin[i+1];
+		admin[i]->access = 0;
+		admin[i]->currKey = adminPass[i];
+		admin[i]->nextAdminState = admin[i+1];
 	}
 	
-	admin[ADMIN_PASS_SIZE].access = 1;
-	admin[ADMIN_PASS_SIZE].nextAdminState = admin[0];
+	admin[ADMIN_PASS_SIZE]->access = 1;
+	admin[ADMIN_PASS_SIZE]->currKey = NULL;
+	admin[ADMIN_PASS_SIZE]->nextAdminState = admin[0];
+	
+	currAdminState = admin[0];
 }
 
-/*
-// Returns cost of slection passed in
-float getCost(uint8_t letter,uint8_t number)
+void textInit(void)
 {
-	float retVal;
+	fileName = (char *)malloc((FILENAME_SIZE + 1) * sizeof(char)); // allocate memory for filename (num characters + null terminator)
+	selectDisp = (char *)malloc((SELECTDISP_SIZE + 1) * sizeof(char));  //allocate memory for selection display
+	text = (char*)malloc(TEXT_SIZE * sizeof(char));	// allocate memory for text buffer
+	item->selectionNum = (char*)malloc(SELECTION_SIZE * sizeof(char));	// allocate memory for item selection number
+	dispText = (char*)malloc(TEXT_SIZE * sizeof(char));// allocate memory for text buffer
+}
+
+/**
+  * @brief Checks which button was pressed
+	*
+	* @param x coordinate
+	* @param y coordinate
+  * @param screen selection
+	* @retval Value of button pressed or null if not within button bounds
+  */
+uint8_t checkButton(uint16_t xCoord, uint16_t yCoord, uint8_t screen)
+{
+	//uint8_t iter[2] = {0, 0}; //hold iterator values for i and j at touch detection location to determine button
+	uint8_t column = 0;
+	uint8_t row = 0;
 	
-	switch(letter)
+	// iterate through columns and rows to determine which button was pressed
+	// eg. i=0 and j=0 indicates that the button labeled "A" was pressed
+	for(uint8_t i = 0; i <= 3; i++)
 	{
-		case ((uint8_t) 'A'):
-			switch(number)
+		for(uint8_t j = 0; j <=4; j++)
+		{
+			if(xCoord > BUTTON_XPOS(j) - BUTTON_SIZE/2 && yCoord > BUTTON_YPOS(i) - BUTTON_SIZE/2 && 
+				xCoord < BUTTON_XPOS(j) + BUTTON_SIZE/2 && yCoord < BUTTON_YPOS(i) + BUTTON_SIZE/2)
 			{
-				case ((uint8_t) '0'):
-					retVal=item[0].itemCost;
-				break;
-				case ((uint8_t) '1'):
-					retVal=item[1].itemCost;
-				break;
-				case ((uint8_t) '2'):
-					retVal=item[2].itemCost;
-				break;
-				default:
-					retVal=0;
-			  break;
+				column = i;
+				row = j;
+				
+				return getButtonDef(column,row,screen);
 			}
-			break;
-		
-		case ((uint8_t) 'B'):
-			switch(number)
-			{
-				case ((uint8_t) '0'):
-					retVal=item[3].itemCost;
-				break;
-				case ((uint8_t) '1'):
-					retVal=item[4].itemCost;
-				break;
-				case ((uint8_t) '2'):
-					retVal=item[5].itemCost;
-				break;
-				case ((uint8_t) '3'):
-					retVal=item[6].itemCost;
-				break;
-
-				default:
-					retVal=0;
-			  break;
-			}
-			break;
-			
-		case ((uint8_t) 'C'):
-			switch(number)
-			{
-				case ((uint8_t) '0'):
-					retVal=item[7].itemCost;
-				break;
-				case ((uint8_t) '1'):
-					retVal=item[8].itemCost;
-				break;
-				case ((uint8_t) '2'):
-					retVal=item[9].itemCost;
-				break;
-				case ((uint8_t) '3'):
-					retVal=item[10].itemCost;
-				break;
-
-				default:
-					retVal=0;
-			  break;
-			}
-			break;
-			
-		case ((uint8_t) 'D'):
-			switch(number)
-			{
-				case ((uint8_t) '0'):
-					retVal=item[11].itemCost;
-				break;
-				case ((uint8_t) '1'):
-					retVal=item[12].itemCost;
-				break;
-				case ((uint8_t) '2'):
-					retVal=item[13].itemCost;
-				break;
-				case ((uint8_t) '3'):
-					retVal=item[14].itemCost;
-				break;
-				case ((uint8_t) '4'):
-					retVal=item[15].itemCost;
-				break;
-				default:
-					retVal=0;
-			  break;
-			}
-			break;
+		}
+	}
 	
-		default:
-			retVal=0;
-		break;
-	}	
+	return NULL;
+}
+
+/**
+  * @brief Returns string value (as an 8 bit integer) of the pressed button
+	*
+	* @param column pointer to key column no
+	* @param row pointer to key row no
+	* @param current view
+	* @retval Value of button pressed
+  */
+uint8_t getButtonDef(uint8_t row,uint8_t column,uint8_t screen)
+{
+	uint8_t retVal;
+	// Screen = 1 is the Selection Screen
+	if(screen == 1)
+	{
+		switch(row)
+		{
+			case 0:
+				switch(column)
+				{
+
+					case 0:
+						retVal='A';
+					break;
+					case 1:
+						retVal='B';
+					break;
+					case 2:
+						retVal='C';
+					break;
+					case 3:
+						retVal='D';
+					break;
+					case 4:
+						retVal='E';
+					break;
+					default:
+					retVal=NULL;
+					break;
+				}
+				break;
+			
+			case 1:
+				switch(column)
+				{
+					case 0:
+						retVal='0';
+					break;
+					case 1:
+						retVal='1';
+					break;
+					case 2:
+						retVal='2';
+					break;
+					case 3:
+						retVal='3';
+					break;
+					case 4:
+						retVal='4';
+					break;
+					default:
+					retVal=NULL;
+					break;
+				}
+				break;
+
+			case 3:
+				switch(column)
+				{
+					case 0:
+						retVal='X';
+					break;
+					case 1:
+						retVal='<';
+					break;
+					case 4:
+						retVal='>';
+					break;
+					default:
+						retVal=NULL;
+					break;
+				}
+				break;
+
+			default:
+				retVal=NULL;
+
+
+			break;
+		}
+	}
+	
+	// screen = 2 is the digit screen
+	if(screen == 2)
+	{
+		switch(row)
+		{
+
+			case 0:
+				switch(column)
+				{
+					case 0:
+						retVal='0';
+					break;
+					case 1:
+						retVal='1';
+					break;
+					case 2:
+						retVal='2';
+					break;
+					case 3:
+						retVal='3';
+					break;
+					case 4:
+						retVal='4';
+					break;
+					default:
+					retVal=NULL;
+					break;
+				}
+				break;
+			
+			case 1:
+				switch(column)
+				{
+					case 0:
+						retVal='5';
+					break;
+					case 1:
+						retVal='6';
+					break;
+					case 2:
+
+						retVal='7';
+					break;
+					case 3:
+						retVal='8';
+					break;
+					case 4:
+						retVal='9';
+					break;
+					default:
+					retVal=NULL;
+					break;
+				}
+				break;
+				
+			case 3:
+				switch(column)
+				{
+					case 0:
+						retVal='X';
+					break;
+					case 1:
+						retVal='<';
+					break;
+					case 4:
+						retVal='>';
+					break;
+					default:
+					retVal=NULL;
+					break;
+				}
+				break;		
+			default:
+				retVal=NULL;
+
+
+			break;
+		}
+	}
+
 	return retVal;
 }
-*/
+
+uint8_t validateSelection(char selectionPressed, uint8_t selectionIndx)
+{
+	if(selectionIndx == 0)
+	{
+		switch(selectionPressed)
+		{
+			case 'A':
+			case 'B':
+			case 'C':
+			case 'D':
+			case 'E':
+				return 1;
+			default:
+				break;
+		}
+	}
+	
+	else if(selectionIndx == 1)
+	{
+		switch(selectionPressed)
+		{
+			case '0':
+			case '1':
+			case '2':
+			case '3':
+			case '4':
+				return 1;
+			default:
+				break;
+		}
+	}
+	
+	return 0;
+}
+
+
+void drawKeypad(uint8_t screen)
+{
+	for(uint8_t row = 0; row <= 3; row++)
+	{
+		// No buttons on row 2
+		if(row == 2)
+			continue;
+		
+		for(uint8_t column = 0; column <= 4; column++)
+		{
+			//don't display last button in first row
+//			if(column == 4 && row == 0)
+//				continue;
+			
+			// Regular buttons on row 0 and 1
+			if(row != 3)
+			{
+				sprintf((char*)dispText, "%c",getButtonDef(row,column,screen));
+				drawButton(BUTTON_XPOS(column),BUTTON_YPOS(row), dispText, LCD_COLOR_BLUE, BUTTON_SIZE);
+			}
+			// Special buttons on row 3
+			else if(column != 2 && column != 3)
+			{			
+				sprintf((char*)dispText, "%c",getButtonDef(row,column,screen));
+				
+				switch(column)
+				{
+					case 0:
+						drawButton(BUTTON_XPOS(column),BUTTON_YPOS(row),dispText, LCD_COLOR_RED, BUTTON_SIZE);
+						break;
+					
+					case 1:
+						drawButton(BUTTON_XPOS(column),BUTTON_YPOS(row),dispText, LCD_COLOR_YELLOW,BUTTON_SIZE);
+						break;
+					
+					case 4:
+						drawButton(BUTTON_XPOS(column),BUTTON_YPOS(row),dispText, LCD_COLOR_GREEN,BUTTON_SIZE);
+				}
+			}
+		}
+	}
+}

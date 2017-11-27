@@ -10,33 +10,32 @@
 #include <stdlib.h>
 
 #define  BUTTON_SIZE          50
-#define  PASS_BUTTON_SIZE			30
 #define  BUTTON_XPOS(j)       (200+((BUTTON_SIZE+10)*j))  //x position for buttons
 #define  BUTTON_YPOS(i)       (50+((BUTTON_SIZE+10)*i)) //y position for buttons
-#define  PASS_BUTTON_XPOS(j)  (48+((PASS_BUTTON_SIZE+5)*j))	//x position for passkey buttons
-#define  PASS_BUTTON_YPOS(i)  (152+((PASS_BUTTON_SIZE+5)*i))	//y position for passkey buttons
-#define  SELECTION_SCREEN			1 //screen definition for item selection
-#define  CARD_SCREEN					2 //screen definition for slide card
 
-#define A_BUTTON_XPOS		20
-#define A_BUTTON_YPOS		(BSP_LCD_GetYSize() - 40)
+#define  SELECTION_SCREEN			1 //screen definition for item selection
+#define  DIGIT_SCREEN					2 //screen definition for slide card
+
+uint8_t dispText[30];
+uint8_t currScreen = DIGIT_SCREEN;
 
 /* Exported functions */	 
 void LCD_Configuration(void);
 void clearScreen(void);
 void drawButton(uint16_t xPos, uint16_t yPos, uint8_t *label, uint32_t color, uint8_t buttonSize);
-uint8_t checkButton(uint16_t xCoord, uint16_t yCoord, uint8_t screen);
-uint8_t getButtonDef(uint8_t row,uint8_t column, uint8_t screen);
-void drawKeypad(void);
 void drawDisplayFrame(void);
+void drawDigits(void);
 
-uint8_t validateSelection(uint8_t selectionPressed, uint8_t selectionIndx);
 //void drawAdmin(void);
 void drawAdminDispFrame(void);
-void drawPassKeypad(void);
-uint8_t getPasskeyButtonDef(uint8_t row,uint8_t column);
-uint8_t checkPassKeyButton(volatile uint16_t xCoord,volatile uint16_t yCoord);
 void displayCost(uint8_t s0,uint8_t s1);
+void drawCardFrame(void);
+void updateCostDisp(float usrBalance, float itemCost, uint8_t updateZone);
+void updateBalanceDisp(float usrBalance);
+void updateSelectionDisp(uint8_t s1, uint8_t s2, uint8_t updateZone);
+void showBalanceArea(void);
+void showItemCountArea(void);
+void updateItemCountDisp(uint8_t cnt);
 void drawCardFrame(void);
 #endif 
 

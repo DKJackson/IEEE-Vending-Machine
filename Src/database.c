@@ -97,6 +97,16 @@ User* readUser(char *fileName)
 	return output;
 }
 
+void writeItem(Item *item, char *fileName)
+{
+	
+}
+
+Item* readItem(char *fileName)
+{
+	
+}
+
 /**
   * @brief  This function is executed in case of error occurrence.
   * @param  None
